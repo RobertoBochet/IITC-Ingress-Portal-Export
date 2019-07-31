@@ -39,98 +39,6 @@ function wrapper() {
     window.portal_scraper_enabled = false;
     window.current_area_scraped = false;
 
-    self.portalInScreen = function portalInScreen(p) {
-        return map.getBounds().contains(p.getLatLng());
-    };
-
-    //  adapted from
-    //+ Jonas Raoni Soares Silva
-    //@ http://jsfromhell.com/math/is-point-in-poly [rev. #0]
-    self.portalInPolygon = function portalInPolygon(polygon, portal) {
-        var poly = polygon.getLatLngs();
-        var pt = portal.getLatLng();
-        var c = false;
-        for (var i = -1, l = poly.length, j = l - 1; ++i < l; j = i) {
-            ((poly[i].lat <= pt.lat && pt.lat < poly[j].lat) || (poly[j].lat <= pt.lat && pt.lat < poly[i].lat)) && (pt.lng < (poly[j].lng - poly[i].lng) * (pt.lat - poly[i].lat) / (poly[j].lat - poly[i].lat) + poly[i].lng) && (c = !c);
-        }
-        return c;
-    };
-
-    // return if the portal is within the drawtool objects.
-    // Polygon and circles are available, and circles are implemented
-    // as round polygons.
-    self.portalInForm = function (layer) {
-        if (layer instanceof L.Rectangle) {
-            return true;
-        }
-        if (layer instanceof L.Circle) {
-            return true;
-        }
-        return false;
-    };
-
-    self.portalInGeo = function (layer) {
-        if (layer instanceof L.GeodesicPolygon) {
-            return true;
-        }
-        if (layer instanceof L.GeodesicCircle) {
-            return true;
-        }
-        return false;
-    };
-
-    self.portalInDrawnItems = function (portal) {
-        var c = false;
-
-        window.plugin.drawTools.drawnItems.eachLayer(function (layer) {
-            if (!(self.portalInForm(layer) || self.portalInGeo(layer))) {
-                return false;
-            }
-
-            if (self.portalInPolygon(layer, portal)) {
-                c = true;
-            }
-        });
-        return c;
-    };
-
-    self.inBounds = function (portal) {
-        if (window.plugin.drawTools && window.plugin.drawTools.drawnItems.getLayers().length) {
-            return self.portalInDrawnItems(portal);
-        } else {
-            return self.portalInScreen(portal);
-        }
-    };
-
-    self.genStr = function genStr(title, image, lat, lng, portalGuid) {
-        var href = lat + "," + lng;
-        var str = "";
-        str = title;
-        str = str.replace(/\"/g, "\\\"");
-        str = str.replace(";", "_");
-        str = '"' + str + '"' + "," + href + "," + '"' + image + '"';
-        if (window.plugin.keys && (typeof window.portals[portalGuid] !== "undefined")) {
-            var keyCount = window.plugin.keys.keys[portalGuid] || 0;
-            str = str + "," + keyCount;
-        }
-        return str;
-    };
-
-    self.genStrFromPortal = function genStrFromPortal(portal, portalGuid) {
-        var lat = portal._latlng.lat,
-            lng = portal._latlng.lng,
-            title = portal.options.data.title || "untitled portal";
-        image = portal.options.data.image || ""
-
-        return self.genStr(title, image, lat, lng, portalGuid);
-    };
-
-    self.addPortalToExportList = function (portalStr, portalGuid) {
-        if (typeof window.master_portal_list[portalGuid] == 'undefined') {
-            window.master_portal_list[portalGuid] = portalStr;
-            self.updateTotalScrapedCount()
-        }
-    };
 
     self.updateTotalScrapedCount = function () {
         $('#totalScrapedPortals').text(window.portals_list.size);
@@ -142,16 +50,6 @@ function wrapper() {
         L.rectangle(bounds, {color: "#00ff11", weight: 1, opacity: 0.9}).addTo(window.map);
     };
 
-    self.managePortals = function managePortals(obj, portal, x) {
-        if (self.inBounds(portal)) {
-            var str = self.genStrFromPortal(portal, x);
-            obj.list.push(str);
-            obj.count += 1;
-            self.addPortalToExportList(str, x);
-        }
-        return obj;
-
-    };
 
     self.isInScreen = (lat, lng) => {
         let bounds = window.map.getBounds();
@@ -225,53 +123,6 @@ function wrapper() {
         navigator.clipboard.writeText(self.getCSV()).then(null);
     };
 
-    self.generateCsvData = function () {
-        var csvData = 'Name, Latitude, Longitude, Image' + "\n";
-        $.each(window.master_portal_list, function (key, value) {
-            csvData += (value + "\n");
-        });
-
-        return csvData;
-    };
-
-    self.downloadCSV = function () {
-        var csvData = self.generateCsvData();
-        var link = document.createElement("a");
-        link.download = 'portalsExporter.csv';
-        link.href = "data:text/csv," + escape(csvData);
-        link.click();
-    }
-
-    self.showDialog = function showDialog(o) {
-        var csvData = self.generateCsvData();
-
-        var data = `
-        <form name='maxfield' action='#' method='post' target='_blank'>
-            <div class="row">
-                <div id='form_area' class="column" style="float:left;width:100%;box-sizing: border-box;padding-right: 5px;">
-                    <textarea class='form_area'
-                        name='portal_list_area'
-                        rows='30'
-                        placeholder='Zoom level must be 15 or higher for portal data to load'
-                        style="width: 100%; white-space: nowrap;">${csvData}</textarea>
-                </div>
-            </div>
-        </form>
-        `;
-
-        var dia = window.dialog({
-            title: "Portal CSV Export",
-            html: data
-        }).parent();
-        $(".ui-dialog-buttonpane", dia).remove();
-        dia.css("width", "600px").css("top", ($(window).height() - dia.height()) / 2).css("left", ($(window).width() - dia.width()) / 2);
-        return dia;
-    };
-
-    self.gen = function gen() {
-        var dialog = self.showDialog(window.master_portal_list);
-        return dialog;
-    };
 
     self.setZoomLevel = function () {
         window.map.setZoom(15);
