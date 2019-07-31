@@ -1,12 +1,12 @@
 // ==UserScript==
-// @id iitc-plugin-ingressportalexport@RobertoBochet
+// @id iitc-plugin-ingressportalsexporter@RobertoBochet
 // @name IITC Plugin: Ingress Portal Export
 // @category Information
-// @version 0.0.5
-// @namespace http://github.com/RobertoBochet/IITC-Ingress-Portal-Export
-// @updateURL https://raw.githubusercontent.com/RobertoBochet/IITC-Ingress-Portal-Export/master/ingress_export.js
-// @downloadURL https://raw.githubusercontent.com/RobertoBochet/IITC-Ingress-Portal-Export/master/ingress_export.js
-// @description Exports portals to a list. It's a fork of https://github.com/Zetaphor/IITC-Ingress-Portal-CSV-Export
+// @version 0.1
+// @namespace http://github.com/RobertoBochet/IITC-Ingress-Portals-Exporter
+// @updateURL https://raw.githubusercontent.com/RobertoBochet/IITC-Ingress-Portals-Exporter/master/ingress_export.js
+// @downloadURL https://raw.githubusercontent.com/RobertoBochet/IITC-Ingress-Portals-Exporter/master/ingress_export.js
+// @description Export portals to a list. It's a fork of https://github.com/Zetaphor/IITC-Ingress-Portal-CSV-Export
 // @include https://www.ingress.com/intel*
 // @include http://www.ingress.com/intel*
 // @include https://ingress.com/intel*
