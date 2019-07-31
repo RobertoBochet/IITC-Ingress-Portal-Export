@@ -19,37 +19,41 @@
 // @match http://ingress.com/intel*
 // @grant none
 // ==/UserScript==
-/*global $:false */
-/*global map:false */
+/*global map:google.maps.Map */
 
-/*global L:false */
 function wrapper() {
     // in case IITC is not available yet, define the base plugin object
     if (typeof window.plugin !== "function") {
-        window.plugin = function () {
+        window.plugin = () => {
         };
     }
 
     // base context for plugin
-    window.plugin.portalsExporter = function () {
-    };
-    var self = window.plugin.portalsExporter;
-
-    window.portals_list = new Map();
-    window.portal_scraper_enabled = false;
-    window.current_area_scraped = false;
-
-
-    self.updateTotalScrapedCount = function () {
-        $('#totalScrapedPortals').text(window.portals_list.size);
+    window.plugin.portalsExporter = () => {
     };
 
-    self.drawRectangle = function () {
-        var bounds = window.map.getBounds();
-        var bounds = [[bounds._southWest.lat, bounds._southWest.lng], [bounds._northEast.lat, bounds._northEast.lng]];
+    let self = window.plugin.portalsExporter;
+
+    self.portalsList = new Map();
+    self.isEnabled = false;
+    self.isWorking = false;
+    self.isCurrentAreaScrapped = false;
+
+
+    self.updateTotalScrapedCount = () => {
+        $('#totalScrapedPortals').text(self.portalsList.size);
+    };
+
+    self.drawRectangle = () => {
+        let bounds = window.map.getBounds();
+
+        bounds = [
+            [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+            [bounds.getNorthEast().lat, bounds.getNorthEast().lng]
+        ];
+
         L.rectangle(bounds, {color: "#00ff11", weight: 1, opacity: 0.9}).addTo(window.map);
     };
-
 
     self.isInScreen = (lat, lng) => {
         let bounds = window.map.getBounds();
@@ -61,7 +65,7 @@ function wrapper() {
     };
 
     self.checkPortals = (portals) => {
-        let c = window.portals_list.size;
+        let c = self.portalsList.size;
         // Parse each portal
         for (let guid in portals) {
             c++;
@@ -69,27 +73,27 @@ function wrapper() {
             if (typeof window.portals[guid] === "undefined") continue;
 
             // Check if the portal is already scrapped
-            if (window.portals_list.has(guid)) continue;
+            if (self.portalsList.has(guid)) continue;
 
             // Check if the portal is in the screen
             if (!self.isInScreen(portals[guid]._latlng.lat, portals[guid]._latlng.lng)) continue;
 
             // Add the portal to global list
-            window.portals_list.set(guid, {
+            self.portalsList.set(guid, {
                 name: portals[guid].options.data.title || "untitled portal",
                 latitude: portals[guid]._latlng.lat,
                 longitude: portals[guid]._latlng.lng,
                 image: portals[guid].options.data.image || ""
             });
         }
-        console.debug(`Portals Exporter|Added ${window.portals_list.size - c} to portals list`);
+        console.debug(`Portals Exporter|Added ${self.portalsList.size - c} to portals list`);
     };
 
     self.getJSON = () => {
         let list = [];
 
         // Create a list of portals
-        window.portals_list.forEach((portal) => {
+        self.portalsList.forEach((portal) => {
             list.push(portal);
         });
 
@@ -102,7 +106,7 @@ function wrapper() {
         let dump = "name, latitude, longitude, image\n";
 
         // Create a list of portals
-        window.portals_list.forEach((portal) => {
+        self.portalsList.forEach((portal) => {
             dump += `"${portal.name.replace(/"/g, '\\\"')}",`;
             dump += `${portal.latitude},`;
             dump += `${portal.longitude},`;
@@ -123,63 +127,73 @@ function wrapper() {
         navigator.clipboard.writeText(self.getCSV()).then(null);
     };
 
-
-    self.setZoomLevel = function () {
+    self.setZoomLevel = () => {
         window.map.setZoom(15);
-        $('#currentZoomLevel').html('15');
         self.updateZoomStatus();
     };
 
-    self.updateZoomStatus = function () {
-        var zoomLevel = window.map.getZoom();
-        $('#currentZoomLevel').html(window.map.getZoom());
+    self.updateZoomStatus = () => {
+        let zoomLevel = window.map.getZoom();
+
+        $('#currentZoomLevel').text(window.map.getZoom());
+
         if (zoomLevel != 15) {
-            window.current_area_scraped = false;
+            self.isCurrentAreaScrapped = false;
             $('#currentZoomLevel').css('color', 'red');
-            if (window.portal_scraper_enabled) $('#scraperStatus').html('Invalid Zoom Level').css('color', 'yellow');
+
+            if (self.isEnabled)
+                $('#scraperStatus')
+                    .text('Invalid Zoom Level')
+                    .css('color', 'yellow');
+
         } else $('#currentZoomLevel').css('color', 'green');
     };
 
-    self.updateTimer = function () {
+    self.updateTimerCallback = () => {
         self.updateZoomStatus();
-        if (window.portal_scraper_enabled) {
-            if (window.map.getZoom() == 15) {
-                if ($('#innerstatus > span.map > span').html() === 'done') {
-                    if (!window.current_area_scraped) {
-                        self.checkPortals(window.portals);
-                        window.current_area_scraped = true;
-                        $('#scraperStatus').html('Running').css('color', 'green');
-                        self.drawRectangle();
-                    } else {
-                        $('#scraperStatus').html('Area Scraped').css('color', 'green');
-                    }
-                } else {
-                    current_area_scraped = false;
-                    $('#scraperStatus').html('Waiting For Map Data').css('color', 'yellow');
-                }
+
+        // The scrapper have to be enabled
+        if (!self.isEnabled) return;
+
+        // The zoom have to be right
+        if (window.map.getZoom() !== 15) return;
+
+        // Another process hasn't to be running
+        if (self.isWorking) return;
+
+        if ($('#innerstatus > span.map > span').html() === 'done') {
+            if (!self.isCurrentAreaScrapped) {
+                self.isWorking = true;
+
+                $('#scraperStatus').html('Running').css('color', 'green');
+
+                self.checkPortals(window.portals);
+                self.updateTotalScrapedCount();
+
+                self.drawRectangle();
+
+                $('#scraperStatus').html('Area Scraped').css('color', 'green');
+
+                self.isCurrentAreaScrapped = true;
+                self.isWorking = false;
             }
-        }
+        } else self.isCurrentAreaScrapped = false;
     };
 
-    self.panMap = function () {
-        window.map.getBounds();
-        window.map.panTo({lat: 40.974379, lng: -85.624982});
-    };
-
-    self.toggleStatus = function () {
-        if (window.portal_scraper_enabled) {
-            window.portal_scraper_enabled = false;
+    self.toggleStatus = () => {
+        if (self.isEnabled) {
+            self.isEnabled = false;
             $('#scraperStatus').html('Stopped').css('color', 'red');
             $('#startScraper').show();
             $('#stopScraper').hide();
-            $('#csvControlsBox').hide();
+            $('#outputBox').hide();
             $('#totalPortals').hide();
         } else {
-            window.portal_scraper_enabled = true;
+            self.isEnabled = true;
             $('#scraperStatus').html('Running').css('color', 'green');
             $('#startScraper').hide();
             $('#stopScraper').show();
-            $('#csvControlsBox').show();
+            $('#outputBox').show();
             $('#totalPortals').show();
             self.updateTotalScrapedCount();
         }
@@ -187,11 +201,8 @@ function wrapper() {
     };
 
     // setup function called by IITC
-    self.setup = function init() {
-        // add controls to toolbox
-        var link = $("");
-        $("#toolbox").append(link);
-
+    self.setup = () => {
+        // Create the portal exporter toolbox
         $(`
         <div id="portalExporterToolbox" style="position: relative;">
             <p style="margin: 5px 0 5px 0; text-align: center; font-weight: bold;">Portal Exporter</p>
@@ -206,18 +217,20 @@ function wrapper() {
             <p style="margin:0 0 0 5px;">Scraper Status: <span style="color: red;" id="scraperStatus">Stopped</span></p>
             <p id="totalPortals" style="display: none; margin:0 0 0 5px;">Total Portals Scraped: <span id="totalScrapedPortals">0</span></p>
 
-            <div id="csvControlsBox" style="display: none; margin-top: 5px; padding: 5px 0 5px 5px; border-top: 1px solid #20A8B1;">
+            <div id="outputBox" style="display: none; margin-top: 5px; padding: 5px 0 5px 5px; border-top: 1px solid #20A8B1;">
                 <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portalsExporter.copyJSON();" title="Copy JSON">Copy JSON</a>
                 <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portalsExporter.copyCSV();" title="Copy CSV">Copy CSV</a>
             </div>
         </div>
         `).insertAfter('#toolbox');
 
-        window.csvUpdateTimer = window.setInterval(self.updateTimer, 500);
+        // Start the timer
+        self.updateTimer = window.setInterval(self.updateTimerCallback, 500);
 
-        // delete self to ensure init can't be run again
-        delete self.init;
+        // Delete this method to ensure setup can't be run again
+        delete self.setup;
     };
+
     // IITC plugin setup
     if (window.iitcLoaded && typeof self.setup === "function") {
         self.setup();
