@@ -1,5 +1,5 @@
-# IITC Ingress Portal CSV Export
-This is a plugin for the [Ingress Total Conversion](http://github.com/iitc-project/ingress-intel-total-conversion) userscript. It allows you to parse the name, image, and coordinates for all Ingress portals within the viewport. This portal data can then be downloaded as a CSV file or viewed in-browser.
+# IITC Ingress Portals Exporter
+This is a plugin for the [Ingress Total Conversion](http://github.com/iitc-project/ingress-intel-total-conversion) userscript. It allows you to parse the name, image, and coordinates for all Ingress portals within the viewport. This portal data can then be exported as JSON or CSV.
 
 ### Usage
 After installing the userscript, navigate to the [Ingress intel page](https://www.ingress.com/intel).
@@ -14,7 +14,7 @@ Once map data has loaded and the viewport has been scraped, a green rectangle is
 Pull requests and issues are welcome.
 
 #### Credit
-This project started as a simple modification to the [IITC Maxfields Exporter](http://github.com/itayo/IITC-Ingress-Maxfields-Exporter) plugin by [itayo](http://github.com/itayo).
+This project started as a fork of the [IITC-Ingress-Portal-CSV-Export](https://github.com/Zetaphor/IITC-Ingress-Portal-CSV-Export) plugin by [Zetaphor](https://github.com/Zetaphor).
 
 ### Disclaimer
 I am in no way affiliated with Niantic, Nintendo, or GameFreak.
