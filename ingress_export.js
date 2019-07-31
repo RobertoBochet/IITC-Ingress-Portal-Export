@@ -29,10 +29,10 @@ function wrapper() {
     }
 
     // base context for plugin
-    window.plugin.portal_csv_export = function() {};
-    var self = window.plugin.portal_csv_export;
+    window.plugin.portal_export = function() {};
+    var self = window.plugin.portal_export;
 
-    window.master_portal_list = {};
+    window.portals_list = {};
     window.portal_scraper_enabled = false;
     window.current_area_scraped = false;
 
@@ -150,17 +150,35 @@ function wrapper() {
 
     };
 
-    self.checkPortals = function checkPortals(portals) {
-        var obj = {
-            list: [],
-            count: 0
-        };
-        for (var x in portals) {
-            if (typeof window.portals[x] !== "undefined") {
-                self.managePortals(obj, window.portals[x], x);
-            }
-        }
-        return obj;
+    self.checkPortals = (portals) => {
+        // Parse each portal
+        portals.forEach((guid, portal) => {
+            // Check if the portal is already scrapped
+            if(guid in window.portals_list) return;
+
+            // Add the portal to global list
+            window.portals_list[guid] = {
+                name: portal.options.data.title || "untitled portal",
+                latitude: portal._latlng.lat,
+                longitude: portal._latlng.lng,
+                image: portal.options.data.image || ""
+            };
+        });
+    };
+
+    self.getJSON = () => {
+        let list = [];
+
+        window.portals_list.forEach((_, portal)=>{
+            list.push(portal);
+        });
+
+        return JSON.stringify(list);
+    };
+
+    self.copyJSON = () => {
+        // Copy the JSON in the user's clipboard
+        navigator.clipboard.writeText(self.getJSON()).then(null);
     };
 
     self.generateCsvData = function() {
@@ -282,21 +300,21 @@ function wrapper() {
 
         var csvToolbox = `
         <div id="csvToolbox" style="position: relative;">
-            <p style="margin: 5px 0 5px 0; text-align: center; font-weight: bold;">Portal CSV Exporter</p>
-            <a id="startScraper" style="position: absolute; top: 0; left: 0; margin: 0 5px 0 5px;" onclick="window.plugin.portal_csv_export.toggleStatus();" title="Start the portal data scraper">Start</a>
-            <a id="stopScraper" style="position: absolute; top: 0; left: 0; display: none; margin: 0 5px 0 5px;" onclick="window.plugin.portal_csv_export.toggleStatus();" title="Stop the portal data scraper">Stop</a>
+            <p style="margin: 5px 0 5px 0; text-align: center; font-weight: bold;">Portal Exporter</p>
+            <a id="startScraper" style="position: absolute; top: 0; left: 0; margin: 0 5px 0 5px;" onclick="window.plugin.portal_export.toggleStatus();" title="Start the portal data scraper">Start</a>
+            <a id="stopScraper" style="position: absolute; top: 0; left: 0; display: none; margin: 0 5px 0 5px;" onclick="window.plugin.portal_export.toggleStatus();" title="Stop the portal data scraper">Stop</a>
 
             <div class="zoomControlsBox" style="margin-top: 5px; padding: 5px 0 5px 5px;">
                 Current Zoom Level: <span id="currentZoomLevel">0</span>
-                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_csv_export.setZoomLevel();" title="Set zoom level to enable portal data download.">Set Zoom Level</a>
+                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_export.setZoomLevel();" title="Set zoom level to enable portal data download.">Set Zoom Level</a>
             </div>
 
             <p style="margin:0 0 0 5px;">Scraper Status: <span style="color: red;" id="scraperStatus">Stopped</span></p>
             <p id="totalPortals" style="display: none; margin:0 0 0 5px;">Total Portals Scraped: <span id="totalScrapedPortals">0</span></p>
 
             <div id="csvControlsBox" style="display: none; margin-top: 5px; padding: 5px 0 5px 5px; border-top: 1px solid #20A8B1;">
-                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_csv_export.gen();" title="View the CSV portal data.">View Data</a>
-                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_csv_export.downloadCSV();" title="Download the CSV portal data.">Download CSV</a>
+                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_export.copyJSON();" title="Copy JSON">Copy JSON</a>
+                <a style="margin: 0 5px 0 5px;" onclick="window.plugin.portal_export.downloadCSV();" title="Download the CSV portal data.">Download CSV</a>
             </div>
         </div>
         `;
